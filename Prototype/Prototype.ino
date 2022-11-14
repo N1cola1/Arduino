@@ -2,6 +2,16 @@
 #include <Wire.h>
 #include <virtuabotixRTC.h>
 #include <IRremote.hpp>
+//#include <Servo.h>
+
+
+#define A 10
+#define B 11
+#define C 12
+#define D 13
+ 
+#define NUMBER_OF_STEPS_PER_REV 512
+
 
 //Remote button values
 //CH - b946ff00
@@ -54,7 +64,14 @@ int A_hour = NULL;
 int A_minute = NULL;
 int AlarmIsActive = NULL;
 
-int buzzer = 13;
+const int PIN_Buzzer = 5;
+
+
+//const int PIN_Servo = 11;
+//Servo myservo;  // create servo object to control a servo
+//myservo.attach(PIN_Servo);  // attaches the servo on pin 10 to the servo object
+//// twelve servo objects can be created on most boards
+//int pos = 1; // variable to store the servo position
 
 
 const int IR_RECEIVE_PIN = 7;
@@ -65,6 +82,41 @@ unsigned long key_value = 0;
 void setup() {
   Serial.begin(9600);
   IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK); // start the receiver
+  pinMode(A,OUTPUT);
+pinMode(B,OUTPUT);
+pinMode(C,OUTPUT);
+pinMode(D,OUTPUT);
+}
+
+
+void write(int a,int b,int c,int d){
+digitalWrite(A,a);
+digitalWrite(B,b);
+digitalWrite(C,c);
+digitalWrite(D,d);
+}
+
+void onestep(){
+  int i = 0;
+  while(i<NUMBER_OF_STEPS_PER_REV){
+i++;
+write(1,0,0,0);
+delay(1);
+write(1,1,0,0);
+delay(1);
+write(0,1,0,0);
+delay(1);
+write(0,1,1,0);
+delay(1);
+write(0,0,1,0);
+delay(1);
+write(0,0,1,1);
+delay(1);
+write(0,0,0,1);
+delay(1);
+write(1,0,0,1);
+delay(1);
+}
 }
 
 
@@ -74,7 +126,7 @@ long waitForData() {
   Serial.println("Waiting...");
   while (key == NO_KEY) {
     if (IrReceiver.decode()) {
-      Serial.println("Data received: " + String(IrReceiver.decodedIRData.decodedRawData, HEX));
+      Serial.println("Data received 3: " + String(IrReceiver.decodedIRData.decodedRawData, HEX));
       key = IrReceiver.decodedIRData.decodedRawData;
       IrReceiver.resume();
     }
@@ -108,11 +160,30 @@ char mapDataToChar(long val) {
 }
 
 
+//void moveServoMotor(int Speed) 
+//{
+//   
+//   for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
+//    // in steps of 1 degree
+//    myservo.write(pos);              // tell servo to go to position in variable 'pos'
+//    delay(Speed);                       // waits 15ms for the servo to reach the position
+//  }
+//  for (pos = 180; pos >= 0; pos -= 1) { // goes from 180 degrees to 0 degrees
+//    myservo.write(pos);              // tell servo to go to position in variable 'pos'
+//    delay(Speed);                       // waits 15ms for the servo to reach the position
+//  }
+// 
+//}
+
+
+//TODO: implement way to prevent wrong data input (silly hours, minutes, etc.)
+
 void loop() {
 
   while (keypressed == NO_KEY) {
+    delay(1000);
     if (IrReceiver.decode()) {
-      Serial.println("Data received: " + String(IrReceiver.decodedIRData.decodedRawData, HEX));
+      Serial.println("Data received 2.2: " + String(IrReceiver.decodedIRData.decodedRawData, HEX));
       //  IrReceiver.printIRResultShort(&Serial); //optional use new print version, we probably wont need it for our project
       keypressed = IrReceiver.decodedIRData.decodedRawData;
       IrReceiver.resume();
@@ -121,20 +192,24 @@ void loop() {
 
     if (myRTC.hours == A_hour && myRTC.minutes == A_minute && AlarmIsActive == 1 && myRTC.seconds >= 0 && myRTC.seconds <= 2) {
       while (keypressedx == NO_KEY) {
-        tone(buzzer, 1000); //You can modify the tone or make your own sound
+
+//        moveServoMotor(15);
+onestep();
+        
+        tone(PIN_Buzzer, 1000); //You can modify the tone or make your own sound
         delay(100);
-        tone(buzzer, 2000);
+        tone(PIN_Buzzer, 2000);
         delay(100);
         Serial.println("Get up !!!"); //Message to show when the alarm is ringing
         if (IrReceiver.decode()) {
-          Serial.println("Data received: " + String(IrReceiver.decodedIRData.decodedRawData, HEX));
+          Serial.println("Data received 1: " + String(IrReceiver.decodedIRData.decodedRawData, HEX));
           keypressedx = IrReceiver.decodedIRData.decodedRawData;
           IrReceiver.resume();
         }
       }
     }
     keypressedx = NO_KEY;
-    noTone(buzzer);
+    noTone(PIN_Buzzer);
 
     Serial.print(String(myRTC.dayofmonth) + "/" + String(myRTC.month) + "/" + String(myRTC.year) + "\n");
     Serial.print(String(myRTC.hours) + ":" + String(myRTC.minutes) + ":" + String(myRTC.seconds) + "\n");
