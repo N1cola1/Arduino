@@ -9,7 +9,7 @@
 #define B 11
 #define C 12
 #define D 13
- 
+
 #define NUMBER_OF_STEPS_PER_REV 512
 
 
@@ -40,6 +40,7 @@
 #define CH_Button 0xB946FF00 // CH == *
 #define Play_Button 0xBC43FF00 // >|
 #define EQ_Button 0xF609FF00 // EQ
+#define PlusHundred_Button 0xE619FF00 // 100+
 #define Button_0 0xE916FF00 // 0
 #define Button_1 0xF30CFF00 // 1
 #define Button_2 0xE718FF00 // 2
@@ -51,6 +52,12 @@
 #define Button_8 0xAD52FF00 // 8
 #define Button_9 0xB54AFF00 // 9
 #define NO_KEY 0x0
+
+#define REC 8 // pin 2 is used for recording
+#define PLAY_E 9 // pin 3 is used for playback-edge trigger
+#define FT 5 // pin 5 is used for feed through
+#define playTime 5000 // playback time 5 seconds
+#define recordTime 3000 // recording time 3 seconds you can extend time upto 10 seconds
 
 virtuabotixRTC myRTC(2, 3, 4); //Wiring of the RTC (CLK,DAT,RST)
 //If you change the wiring change the pins here also
@@ -66,6 +73,8 @@ int AlarmIsActive = NULL;
 
 const int PIN_Buzzer = 5;
 
+char inChar;
+bool configuration = false;
 
 //const int PIN_Servo = 11;
 //Servo myservo;  // create servo object to control a servo
@@ -82,41 +91,93 @@ unsigned long key_value = 0;
 void setup() {
   Serial.begin(9600);
   IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK); // start the receiver
-  pinMode(A,OUTPUT);
-pinMode(B,OUTPUT);
-pinMode(C,OUTPUT);
-pinMode(D,OUTPUT);
+  pinMode(A, OUTPUT);
+  pinMode(B, OUTPUT);
+  pinMode(C, OUTPUT);
+  pinMode(D, OUTPUT);
+
+  pinMode(REC, OUTPUT); // set the REC pin as output
+
+  pinMode(PLAY_E, OUTPUT); // set the PLAY_E pin as output
+  pinMode(FT, OUTPUT); // set the FT pin as output
+  Serial.begin(9600);// set up Serial monitor
+
+  setAlarmTone();
+
 }
 
 
-void write(int a,int b,int c,int d){
-digitalWrite(A,a);
-digitalWrite(B,b);
-digitalWrite(C,c);
-digitalWrite(D,d);
+void setAlarmTone() {
+  while (configuration == false) {
+    Serial.println("Waiting to record a sound");
+    Serial.println("### Press play button to record");
+    long val = waitForData();
+    if (val == Play_Button) {
+      digitalWrite(REC, HIGH);
+      Serial.println("Recording started");
+      delay(recordTime);
+      digitalWrite(REC, LOW);
+      Serial.println("Recording Stopped ");
+      configuration = true;
+    }
+  }
 }
 
-void onestep(){
+
+//void playVoiceLine() {
+//  while (Serial.available() > 0 || keepPlaying || inChar != 's' || inChar != 'S') {
+//    inChar = (char)Serial.read();
+//    Serial.println(inChar);
+//    if(inChar =='p' || inChar =='P' || keepPlaying && inChar != 's' || keepPlaying && inChar != 'S'){
+//      Serial.println("In if: " + String(inChar));
+//      if (inChar == 's' || inChar == 'S') {
+//        keepPlaying = false;
+//        break;
+//      }
+//      keepPlaying = true;
+//      digitalWrite(PLAY_E, HIGH);
+//      delay(50);
+//      digitalWrite(PLAY_E, LOW);
+//      Serial.println("Playbak Started");
+//      delay(playTime);
+//      Serial.println("Playbak Ended");
+//    }
+//    else if(inChar == 's' || inChar == 'S') {
+//      keepPlaying = false;
+//      break;
+//    }
+//  delay(500);
+//}
+
+
+void write(int a, int b, int c, int d) {
+  digitalWrite(A, a);
+  digitalWrite(B, b);
+  digitalWrite(C, c);
+  digitalWrite(D, d);
+}
+
+void onestep() {
   int i = 0;
-  while(i<NUMBER_OF_STEPS_PER_REV){
-i++;
-write(1,0,0,0);
-delay(1);
-write(1,1,0,0);
-delay(1);
-write(0,1,0,0);
-delay(1);
-write(0,1,1,0);
-delay(1);
-write(0,0,1,0);
-delay(1);
-write(0,0,1,1);
-delay(1);
-write(0,0,0,1);
-delay(1);
-write(1,0,0,1);
-delay(1);
-}
+  while (i < NUMBER_OF_STEPS_PER_REV) {
+    i++;
+    write(1, 0, 0, 0);
+    delay(1);
+    write(1, 1, 0, 0);
+    delay(1);
+    write(0, 1, 0, 0);
+    delay(1);
+    write(0, 1, 1, 0);
+    delay(1);
+    write(0, 0, 1, 0);
+    delay(1);
+    write(0, 0, 1, 1);
+    delay(1);
+    write(0, 0, 0, 1);
+    delay(1);
+    write(1, 0, 0, 1);
+    delay(1);
+  }
 }
 
 
@@ -160,9 +221,9 @@ char mapDataToChar(long val) {
 }
 
 
-//void moveServoMotor(int Speed) 
+//void moveServoMotor(int Speed)
 //{
-//   
+//
 //   for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
 //    // in steps of 1 degree
 //    myservo.write(pos);              // tell servo to go to position in variable 'pos'
@@ -172,11 +233,11 @@ char mapDataToChar(long val) {
 //    myservo.write(pos);              // tell servo to go to position in variable 'pos'
 //    delay(Speed);                       // waits 15ms for the servo to reach the position
 //  }
-// 
+//
 //}
 
 
-//TODO: implement way to prevent wrong data input (silly hours, minutes, etc.)
+//TODO: try to add the dc motor instead of the stepper motor
 
 void loop() {
 
@@ -189,17 +250,22 @@ void loop() {
       IrReceiver.resume();
     }
     myRTC.updateTime();
-
     if (myRTC.hours == A_hour && myRTC.minutes == A_minute && AlarmIsActive == 1 && myRTC.seconds >= 0 && myRTC.seconds <= 2) {
-      while (keypressedx == NO_KEY) {
-
-//        moveServoMotor(15);
-onestep();
-        
-        tone(PIN_Buzzer, 1000); //You can modify the tone or make your own sound
-        delay(100);
-        tone(PIN_Buzzer, 2000);
-        delay(100);
+      while (keypressedx == NO_KEY || keypressedx != PlusHundred_Button || keypressedx != Play_Button) {
+        if (keypressedx == Play_Button) {
+          AlarmIsActive = false;
+          Serial.println("Alarm was deactivated.");
+          break;
+        } else if (keypressedx == PlusHundred_Button) {
+          A_minute += 5;
+          Serial.println("Alarm snoozed. You prolonged your sleeping time by 5 min.");
+          break;
+        }
+        //        moveServoMotor(15);
+        onestep();
+        digitalWrite(PLAY_E, HIGH);
+        delay(50);
+        digitalWrite(PLAY_E, LOW);
         Serial.println("Get up !!!"); //Message to show when the alarm is ringing
         if (IrReceiver.decode()) {
           Serial.println("Data received 1: " + String(IrReceiver.decodedIRData.decodedRawData, HEX));
@@ -209,16 +275,13 @@ onestep();
       }
     }
     keypressedx = NO_KEY;
-    noTone(PIN_Buzzer);
 
     Serial.print(String(myRTC.dayofmonth) + "/" + String(myRTC.month) + "/" + String(myRTC.year) + "\n");
     Serial.print(String(myRTC.hours) + ":" + String(myRTC.minutes) + ":" + String(myRTC.seconds) + "\n");
-
-    delay(100);
   }
 
-//  Serial.println("Decode: " + String(IrReceiver.decode())); //0 if nothing pressed
-//  Serial.println("RawData: " + String(IrReceiver.decodedIRData.decodedRawData)); //0 if nothing pressed, value of the key which was pressed
+  //  Serial.println("Decode: " + String(IrReceiver.decode())); //0 if nothing pressed
+  //  Serial.println("RawData: " + String(IrReceiver.decodedIRData.decodedRawData)); //0 if nothing pressed, value of the key which was pressed
 
   //////////////////////////////////////// Clock setup /////////////////////////////////////////
 
@@ -228,28 +291,36 @@ onestep();
     Serial.println("Setup year");
 
     long keypressed2 = waitForData();
-    if (isNumber(keypressed2)) {
-      c1 = mapDataToChar(keypressed2);
-      Serial.println(c1);
+    while (!isNumber(keypressed2)) {
+      Serial.println("Wrong Data received. Please press the button again.");
+      keypressed2 = waitForData();
     }
+    c1 = mapDataToChar(keypressed2);
+    Serial.println(c1);
 
     long keypressed3 = waitForData();
-    if (isNumber(keypressed3)) {
-      c2 = mapDataToChar(keypressed3);
-      Serial.println(c2);
+    while (!isNumber(keypressed3)) {
+      Serial.println("Wrong Data received. Please press the button again.");
+      keypressed3 = waitForData();
     }
+    c2 = mapDataToChar(keypressed3);
+    Serial.println(c2);
 
     long keypressed4 = waitForData();
-    if (isNumber(keypressed4)) {
-      c3 = mapDataToChar(keypressed4);
-      Serial.println(c3);
+    while (!isNumber(keypressed4)) {
+      Serial.println("Wrong Data received. Please press the button again.");
+      keypressed4 = waitForData();
     }
+    c3 = mapDataToChar(keypressed4);
+    Serial.println(c3);
 
     long keypressed5 = waitForData();
-    if (isNumber(keypressed5)) {
-      c4 = mapDataToChar(keypressed5);
-      Serial.println(c4);
+    while (!isNumber(keypressed5)) {
+      Serial.println("Wrong Data received. Please press the button again.");
+      keypressed4 = waitForData();
     }
+    c4 = mapDataToChar(keypressed5);
+    Serial.println(c4);
 
     i1 = (c1 - 48) * 1000;  //the keys pressed are stored into chars I convert them to int then i did some multiplication to get the code as an int of xxxx
     i2 = (c2 - 48) * 100;
@@ -262,16 +333,20 @@ onestep();
     Serial.println("Setup month");
 
     long keypressed6 = waitForData();
-    if (isNumber(keypressed6)) {
-      c1 = mapDataToChar(keypressed6);
-      Serial.println(c1);
+    while (!isNumber(keypressed6)) {
+      Serial.println("Wrong Data received. Please press the button again.");
+      keypressed6 = waitForData();
     }
+    c1 = mapDataToChar(keypressed6);
+    Serial.println(c1);
 
     long keypressed7 = waitForData();
-    if (isNumber(keypressed7)) {
-      c2 = mapDataToChar(keypressed7);
-      Serial.println(c2);
+    while (!isNumber(keypressed7)) {
+      Serial.println("Wrong Data received. Please press the button again.");
+      keypressed7 = waitForData();
     }
+    c2 = mapDataToChar(keypressed7);
+    Serial.println(c2);
 
     i1 = (c1 - 48) * 10;
     i2 = c2 - 48;
@@ -282,16 +357,22 @@ onestep();
     Serial.println("Setup Day");
 
     long keypressed8 = waitForData();
-    if (isNumber(keypressed8)) {
-      c1 = mapDataToChar(keypressed8);
-      Serial.println(c1);
+    while (!isNumber(keypressed8)) {
+      Serial.println("Wrong Data received. Please press the button again.");
+      keypressed8 = waitForData();
     }
+    c1 = mapDataToChar(keypressed8);
+    Serial.println(c1);
+
 
     long keypressed9 = waitForData();
-    if (isNumber(keypressed9)) {
-      c2 = mapDataToChar(keypressed9);
-      Serial.println(c2);
+    while (!isNumber(keypressed9)) {
+      Serial.println("Wrong Data received. Please press the button again.");
+      keypressed9 = waitForData();
     }
+    c2 = mapDataToChar(keypressed9);
+    Serial.println(c2);
+
 
     i1 = (c1 - 48) * 10;
     i2 = c2 - 48;
@@ -302,16 +383,22 @@ onestep();
     Serial.println("Setup hour");
 
     long keypressed10 = waitForData();
-    if (isNumber(keypressed10)) {
-      c1 = mapDataToChar(keypressed10);
-      Serial.println(c1);
+    while (!isNumber(keypressed10)) {
+      Serial.println("Wrong Data received. Please press the button again.");
+      keypressed10 = waitForData();
     }
+    c1 = mapDataToChar(keypressed10);
+    Serial.println(c1);
+
 
     long keypressed11 = waitForData();
-    if (isNumber(keypressed11)) {
-      c2 = mapDataToChar(keypressed11);
-      Serial.println(c2);
+    while (!isNumber(keypressed11)) {
+      Serial.println("Wrong Data received. Please press the button again.");
+      keypressed11 = waitForData();
     }
+    c2 = mapDataToChar(keypressed11);
+    Serial.println(c2);
+
 
     i1 = (c1 - 48) * 10;
     i2 = c2 - 48;
@@ -322,16 +409,22 @@ onestep();
     Serial.println("Setup minutes");
 
     long keypressed12 = waitForData();
-    if (isNumber(keypressed12)) {
-      c1 = mapDataToChar(keypressed12);
-      Serial.println(c1);
+    while (!isNumber(keypressed12)) {
+      Serial.println("Wrong Data received. Please press the button again.");
+      keypressed12 = waitForData();
     }
+    c1 = mapDataToChar(keypressed12);
+    Serial.println(c1);
+
 
     long keypressed13 = waitForData();
-    if (isNumber(keypressed13)) {
-      c2 = mapDataToChar(keypressed13);
-      Serial.println(c2);
+    while (!isNumber(keypressed13)) {
+      Serial.println("Wrong Data received. Please press the button again.");
+      keypressed13 = waitForData();
     }
+    c2 = mapDataToChar(keypressed13);
+    Serial.println(c2);
+
 
     i1 = (c1 - 48) * 10;
     i2 = c2 - 48;
@@ -352,16 +445,22 @@ onestep();
     Serial.println("Set alarm hour");
 
     long keypressed14 = waitForData();
-    if (isNumber(keypressed14)) {
-      c1 = mapDataToChar(keypressed14);
-      Serial.println(c1);
+    while (!isNumber(keypressed14)) {
+      Serial.println("Wrong Data received. Please press the button again.");
+      keypressed14 = waitForData();
     }
+    c1 = mapDataToChar(keypressed14);
+    Serial.println(c1);
 
     long keypressed15 = waitForData();
-    if (isNumber(keypressed15)) {
-      c2 = mapDataToChar(keypressed15);
-      Serial.println(c2);
+    while (!isNumber(keypressed15)) {
+      Serial.println("Wrong Data received. Please press the button again.");
+      keypressed15 = waitForData();
     }
+    c2 = mapDataToChar(keypressed15);
+    Serial.println(c2);
+
+    //TODO change remote input to version above
 
     i1 = (c1 - 48) * 10;
     i2 = c2 - 48;
@@ -372,16 +471,20 @@ onestep();
     Serial.println("Set alarm minutes");
 
     long keypressed16 = waitForData();
-    if (isNumber(keypressed16)) {
-      c1 = mapDataToChar(keypressed16);
-      Serial.println(c1);
+    while (!isNumber(keypressed16)) {
+      Serial.println("Wrong Data received. Please press the button again.");
+      keypressed16 = waitForData();
     }
+    c1 = mapDataToChar(keypressed16);
+    Serial.println(c1);
 
     long keypressed17 = waitForData();
-    if (isNumber(keypressed17)) {
-      c2 = mapDataToChar(keypressed17);
-      Serial.println(c2);
+    while (!isNumber(keypressed17)) {
+      Serial.println("Wrong Data received. Please press the button again.");
+      keypressed17 = waitForData();
     }
+    c2 = mapDataToChar(keypressed17);
+    Serial.println(c2);
 
     i1 = (c1 - 48) * 10;
     i2 = c2 - 48;
@@ -395,7 +498,7 @@ onestep();
 
   ///////////////////////////////// Deactivate alarm ////////////////////////////////////
 
-  if (keypressed == 'B') {
+  if (keypressed == Play_Button) {
     Serial.println("Alarm deactivated");
     AlarmIsActive = 0;
     keypressed = NO_KEY;
@@ -404,5 +507,4 @@ onestep();
     myRTC.updateTime();
     keypressed = NO_KEY;
   }
-  //TODO solve problem that alarm is only one time setable -> why?
 }
