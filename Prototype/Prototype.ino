@@ -3,6 +3,7 @@
 #include <virtuabotixRTC.h>
 #include <IRremote.hpp>
 //#include <Servo.h>
+//#include <ServoTimer2.h>
 
 
 #define A 10
@@ -36,6 +37,16 @@
 //8 - ad52ff00
 //9 - b54aff00
 
+//Seven segment display
+// A0 = C
+// A1 = DP
+// A2 = D
+// A3 = E
+// A4 = G
+// A5 = F
+// 5 = B
+// 6 = A
+
 // define the values for the remote functionality
 #define CH_Button 0xB946FF00 // CH == *
 #define Play_Button 0xBC43FF00 // >|
@@ -59,6 +70,15 @@
 #define playTime 5000 // playback time 5 seconds
 #define recordTime 3000 // recording time 3 seconds you can extend time upto 10 seconds
 
+//seven segment display values
+#define a 5
+#define b A0
+#define c A1
+#define d A2
+#define e A3
+#define g A4
+#define f A5
+
 virtuabotixRTC myRTC(2, 3, 4); //Wiring of the RTC (CLK,DAT,RST)
 //If you change the wiring change the pins here also
 
@@ -77,7 +97,7 @@ char inChar;
 bool configuration = false;
 
 //const int PIN_Servo = 11;
-//Servo myservo;  // create servo object to control a servo
+//Servo servo;  // create servo object to control a servo
 //myservo.attach(PIN_Servo);  // attaches the servo on pin 10 to the servo object
 //// twelve servo objects can be created on most boards
 //int pos = 1; // variable to store the servo position
@@ -102,13 +122,25 @@ void setup() {
   pinMode(FT, OUTPUT); // set the FT pin as output
   Serial.begin(9600);// set up Serial monitor
 
-  setAlarmTone();
+  //  servo.attach(5); //connect servo motor to pin 5
+  //  servo.write(0); //set angle of servo motor
 
+  pinMode(A0, OUTPUT);
+  pinMode(A1, OUTPUT);
+  pinMode(A2, OUTPUT);
+  pinMode(A3, OUTPUT);
+  pinMode(A4, OUTPUT);
+  pinMode(A5, OUTPUT);
+  pinMode(5, OUTPUT);
+  pinMode(6, OUTPUT);
+
+  setAlarmTone();
 }
 
 
 void setAlarmTone() {
   while (configuration == false) {
+    displayWaiting();
     Serial.println("Waiting to record a sound");
     Serial.println("### Press play button to record");
     long val = waitForData();
@@ -150,11 +182,134 @@ void setAlarmTone() {
 //}
 
 
-void write(int a, int b, int c, int d) {
-  digitalWrite(A, a);
-  digitalWrite(B, b);
-  digitalWrite(C, c);
-  digitalWrite(D, d);
+void display1(void) {
+  digitalWrite(b, HIGH);
+  digitalWrite(c, HIGH);
+}
+
+void display2(void) {
+  digitalWrite(a, HIGH);
+  digitalWrite(b, HIGH);
+  digitalWrite(g, HIGH);
+  digitalWrite(e, HIGH);
+  digitalWrite(d, HIGH);
+}
+
+void display3(void)
+{
+  digitalWrite(a, HIGH);
+  digitalWrite(b, HIGH);
+
+  digitalWrite(c, HIGH);
+  digitalWrite(d, HIGH);
+  digitalWrite(g, HIGH);
+}
+
+void display4(void)
+{
+  digitalWrite(f, HIGH);
+  digitalWrite(b, HIGH);
+  digitalWrite(g, HIGH);
+  digitalWrite(c, HIGH);
+
+}
+
+void display5(void)
+{
+  digitalWrite(a, HIGH);
+  digitalWrite(f, HIGH);
+  digitalWrite(g, HIGH);
+  digitalWrite(c, HIGH);
+  digitalWrite(d, HIGH);
+}
+
+void display6(void)
+{
+  digitalWrite(a, HIGH);
+  digitalWrite(f, HIGH);
+  digitalWrite(g, HIGH);
+  digitalWrite(c, HIGH);
+  digitalWrite(d, HIGH);
+  digitalWrite(e, HIGH);
+}
+
+void display7(void)
+{
+  digitalWrite(a, HIGH);
+  digitalWrite(b, HIGH);
+  digitalWrite(c, HIGH);
+}
+
+void display8(void)
+{
+  digitalWrite(a, HIGH);
+  digitalWrite(b, HIGH);
+  digitalWrite(g, HIGH);
+  digitalWrite(c, HIGH);
+  digitalWrite(d, HIGH);
+  digitalWrite(e, HIGH);
+  digitalWrite(f, HIGH);
+}
+
+void clearDisplay(void)
+{
+  digitalWrite(a, LOW);
+  digitalWrite(b, LOW);
+  digitalWrite(g, LOW);
+  digitalWrite(c, LOW);
+  digitalWrite(d, LOW);
+  digitalWrite(e, LOW);
+  digitalWrite(f, LOW);
+}
+
+void display9(void)
+{
+  digitalWrite(a, HIGH);
+  digitalWrite(b, HIGH);
+  digitalWrite(g, HIGH);
+  digitalWrite(c, HIGH);
+  digitalWrite(d, HIGH);
+  digitalWrite(f, HIGH);
+}
+
+void display0(void)
+{
+  digitalWrite(a, HIGH);
+  digitalWrite(b, HIGH);
+  digitalWrite(c, HIGH);
+  digitalWrite(d, HIGH);
+  digitalWrite(e, HIGH);
+  digitalWrite(f, HIGH);
+}
+
+void displayWaiting() {
+  digitalWrite(a, HIGH);
+  digitalWrite(b, HIGH); 
+  delay(200);
+  digitalWrite(a, LOW); 
+  digitalWrite(c, HIGH); 
+  delay(200);
+  digitalWrite(b, LOW); 
+  digitalWrite(d, HIGH); 
+  delay(200);
+  digitalWrite(c, LOW); 
+  digitalWrite(e, HIGH); 
+  delay(200);
+  digitalWrite(d, LOW); 
+  digitalWrite(f, HIGH); 
+  delay(200);
+  digitalWrite(e, LOW);
+  digitalWrite(a, HIGH);  
+  delay(200); 
+  digitalWrite(f, LOW); 
+}
+
+
+void write(int _a, int _b, int _c, int _d) {
+  digitalWrite(A, _a);
+  digitalWrite(B, _b);
+  digitalWrite(C, _c);
+  digitalWrite(D, _d);
 }
 
 void onestep() {
@@ -184,8 +339,10 @@ void onestep() {
 // wait for key: wait for a limited time period if a key gets pressed or not
 long waitForData() {
   long key = NO_KEY;
+  displayWaiting();
   Serial.println("Waiting...");
   while (key == NO_KEY) {
+    displayWaiting();
     if (IrReceiver.decode()) {
       Serial.println("Data received 3: " + String(IrReceiver.decodedIRData.decodedRawData, HEX));
       key = IrReceiver.decodedIRData.decodedRawData;
@@ -206,16 +363,16 @@ bool isNumber(long val) {
 
 char mapDataToChar(long val) {
   switch (val) {
-    case Button_0: return '0';
-    case Button_1: return '1';
-    case Button_2: return '2';
-    case Button_3: return '3';
-    case Button_4: return '4';
-    case Button_5: return '5';
-    case Button_6: return '6';
-    case Button_7: return '7';
-    case Button_8: return '8';
-    case Button_9: return '9';
+    case Button_0: clearDisplay(); display0(); return '0';
+    case Button_1: clearDisplay(); display1(); return '1';
+    case Button_2: clearDisplay(); display2(); return '2';
+    case Button_3: clearDisplay(); display3(); return '3';
+    case Button_4: clearDisplay(); display4(); return '4';
+    case Button_5: clearDisplay(); display5(); return '5';
+    case Button_6: clearDisplay(); display6(); return '6';
+    case Button_7: clearDisplay(); display7(); return '7';
+    case Button_8: clearDisplay(); display8(); return '8';
+    case Button_9: clearDisplay(); display9(); return '9';
     default: return ' ';
   }
 }
@@ -237,7 +394,25 @@ char mapDataToChar(long val) {
 //}
 
 
-//TODO: try to add the dc motor instead of the stepper motor
+//void useServo() {
+// // scan from 0 to 180 degrees
+// Serial.println("Try to use servo motor");
+//  int angle = 0;
+//  for(angle = 10; angle < 180; angle++)
+//  {
+//    servo.write(angle);
+//    delay(15);
+//  }
+//  // now scan back from 180 to 0 degrees
+//  for(angle = 180; angle > 10; angle--)
+//  {
+//    servo.write(angle);
+//    delay(15);
+//  }
+//}
+
+
+//TODO: try to add the servo motor instead of the stepper motor
 
 void loop() {
 
@@ -250,6 +425,9 @@ void loop() {
       IrReceiver.resume();
     }
     myRTC.updateTime();
+
+    //    useServo();
+
     if (myRTC.hours == A_hour && myRTC.minutes == A_minute && AlarmIsActive == 1 && myRTC.seconds >= 0 && myRTC.seconds <= 2) {
       while (keypressedx == NO_KEY || keypressedx != PlusHundred_Button || keypressedx != Play_Button) {
         if (keypressedx == Play_Button) {
@@ -435,6 +613,7 @@ void loop() {
 
     myRTC.setDS1302Time(22, N_minutes, N_hour, 1, N_day, N_month, N_year);
     keypressed = NO_KEY;
+    clearDisplay();
   }
 
   ///////////////////////////////////////// Alarm setup /////////////////////////////////////////////
@@ -494,6 +673,7 @@ void loop() {
     delay(500);
     AlarmIsActive = 1;
     keypressed = NO_KEY;
+    clearDisplay();
   }
 
   ///////////////////////////////// Deactivate alarm ////////////////////////////////////
