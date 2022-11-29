@@ -3,13 +3,6 @@
 #include <IRremote.hpp>
 #include <Stepper.h>
 
-#define IN1 13
-#define IN2 11
-#define IN3 12
-#define IN4 10
-
-#define STEPS 2038
-
 //Remote button values
 //CH - b946ff00
 //Play - bc43ff00
@@ -33,21 +26,12 @@
 //8 - ad52ff00
 //9 - b54aff00
 
-//Seven segment display
-// A0 = C
-// A1 = DP
-// A2 = D
-// A3 = E
-// A4 = G
-// A5 = F
-// 5 = B
-// 6 = A
-
 // define the values for the remote functionality
 #define CH_Button 0xB946FF00 // CH == *
 #define Play_Button 0xBC43FF00 // >|
 #define EQ_Button 0xF609FF00 // EQ
 #define PlusHundred_Button 0xE619FF00 // 100+
+#define PlusTwoHundred_Button 0xF20DFF00 // 200+
 #define Button_0 0xE916FF00 // 0
 #define Button_1 0xF30CFF00 // 1
 #define Button_2 0xE718FF00 // 2
@@ -66,7 +50,17 @@
 #define playTime 5000 // playback time 5 seconds
 #define recordTime 3000 // recording time 3 seconds you can extend time upto 10 seconds
 
-//seven segment display values
+//Seven segment display
+// A0 = C
+// A1 = DP
+// A2 = D
+// A3 = E
+// A4 = G
+// A5 = F
+// 5 = B
+// 6 = A
+
+//seven segment display pins
 #define a 5
 #define b A0
 #define c A1
@@ -74,6 +68,15 @@
 #define e A3
 #define g A4
 #define f A5
+
+// define pins for the step motor
+#define IN1 13
+#define IN2 11
+#define IN3 12
+#define IN4 10
+
+// define number of steps needed for one rotation of the step motor
+const int STEPS = 512;
 
 virtuabotixRTC myRTC(2, 3, 4); //Wiring of the RTC (CLK,DAT,RST)
 //If you change the wiring change the pins here also
@@ -95,7 +98,7 @@ bool configuration = false;
 const int IR_RECEIVE_PIN = 7;
 unsigned long key_value = 0;
 
-Stepper myStepper = Stepper(STEPS, IN1, IN2, IN3, IN4);
+Stepper myStepper = Stepper(STEPS, IN1, IN2, IN3, IN4); // initialization of the step motor instance
 
 
 void setup() {
@@ -130,11 +133,15 @@ void setAlarmTone() {
     Serial.println("### Press play button to record");
     long val = waitForData();
     if (val == Play_Button) {
-      digitalWrite(REC, HIGH);
       Serial.println("Recording started");
+      clearDisplay();
+      displayR();
+      delay(250);
+      digitalWrite(REC, HIGH);
       delay(recordTime);
       digitalWrite(REC, LOW);
       Serial.println("Recording Stopped ");
+      clearDisplay();
       configuration = true;
     }
   }
@@ -251,6 +258,25 @@ void display0(void)
 }
 
 
+void displayR() {
+  digitalWrite(a, HIGH);
+  digitalWrite(b, HIGH);
+  digitalWrite(c, HIGH);
+  digitalWrite(e, HIGH);
+  digitalWrite(f, HIGH);
+  digitalWrite(g, HIGH);
+}
+
+
+void displayE() {
+  digitalWrite(a, HIGH);
+  digitalWrite(f, HIGH);
+  digitalWrite(d, HIGH);
+  digitalWrite(e, HIGH);
+  digitalWrite(g, HIGH);
+}
+
+
 void displayWaiting() {
   digitalWrite(a, HIGH);
   digitalWrite(b, HIGH); 
@@ -277,6 +303,7 @@ void displayWaiting() {
 // wait for key: wait for a limited time period if a key gets pressed or not
 long waitForData() {
   long key = NO_KEY;
+  clearDisplay();
   displayWaiting();
   Serial.println("Waiting...");
   while (key == NO_KEY) {
@@ -287,7 +314,40 @@ long waitForData() {
       IrReceiver.resume();
     }
   }
+  clearDisplay();
   return key;
+}
+
+
+void write(int _a, int _b, int _c, int _d) {
+  digitalWrite(IN1, _a);
+  digitalWrite(IN2, _b);
+  digitalWrite(IN3, _c);
+  digitalWrite(IN4, _d);
+}
+
+
+void oneStep() {
+  int i = 0;
+  while (i < STEPS) {
+    i++;
+    write(1, 0, 0, 0);
+    delay(1);
+    write(1, 1, 0, 0);
+    delay(1);
+    write(0, 1, 0, 0);
+    delay(1);
+    write(0, 1, 1, 0);
+    delay(1);
+    write(0, 0, 1, 0);
+    delay(1);
+    write(0, 0, 1, 1);
+    delay(1);
+    write(0, 0, 0, 1);
+    delay(1);
+    write(1, 0, 0, 1);
+    delay(1);
+  }
 }
 
 
@@ -301,16 +361,16 @@ bool isNumber(long val) {
 
 char mapDataToChar(long val) {
   switch (val) {
-    case Button_0: clearDisplay(); display0(); return '0';
-    case Button_1: clearDisplay(); display1(); return '1';
-    case Button_2: clearDisplay(); display2(); return '2';
-    case Button_3: clearDisplay(); display3(); return '3';
-    case Button_4: clearDisplay(); display4(); return '4';
-    case Button_5: clearDisplay(); display5(); return '5';
-    case Button_6: clearDisplay(); display6(); return '6';
-    case Button_7: clearDisplay(); display7(); return '7';
-    case Button_8: clearDisplay(); display8(); return '8';
-    case Button_9: clearDisplay(); display9(); return '9';
+    case Button_0: clearDisplay(); display0(); delay(1000); return '0';
+    case Button_1: clearDisplay(); display1(); delay(1000); return '1';
+    case Button_2: clearDisplay(); display2(); delay(1000); return '2';
+    case Button_3: clearDisplay(); display3(); delay(1000); return '3';
+    case Button_4: clearDisplay(); display4(); delay(1000); return '4';
+    case Button_5: clearDisplay(); display5(); delay(1000); return '5';
+    case Button_6: clearDisplay(); display6(); delay(1000); return '6';
+    case Button_7: clearDisplay(); display7(); delay(1000); return '7';
+    case Button_8: clearDisplay(); display8(); delay(1000); return '8';
+    case Button_9: clearDisplay(); display9(); delay(1000); return '9';
     default: return ' ';
   }
 }
@@ -333,14 +393,22 @@ void loop() {
         if (keypressedx == Play_Button) {
           AlarmIsActive = false;
           Serial.println("Alarm was deactivated.");
+          displayE();
+          delay(1500);
+          clearDisplay();
           break;
         } else if (keypressedx == PlusHundred_Button) {
           A_minute += 5;
           Serial.println("Alarm snoozed. You prolonged your sleeping time by 5 min.");
+          display5  ();
+          delay(1500);
+          clearDisplay();
           break;
         }
         
-        myStepper.step(STEPS);
+//        myStepper.step(-STEPS); //todo implement the old onestep() code
+//        delay(500);
+        oneStep();
         
         digitalWrite(PLAY_E, HIGH);
         delay(50);
@@ -577,10 +645,26 @@ void loop() {
   ///////////////////////////////// Deactivate alarm ////////////////////////////////////
 
   if (keypressed == Play_Button) {
-    Serial.println("Alarm deactivated");
-    AlarmIsActive = 0;
+    if (AlarmIsActive == 1) {
+      Serial.println("Alarm deactivated");
+      display0();
+      AlarmIsActive = 0;
+      keypressed = NO_KEY;
+      delay(1000);
+      clearDisplay();  
+    } else {
+      Serial.println("Alarm activated");
+      displayR();
+      AlarmIsActive = 1;
+      keypressed = NO_KEY;
+      delay(1000);
+      clearDisplay();
+    }
+  } else if (keypressed == PlusTwoHundred_Button) {
+    Serial.println("Record new tone");
+    configuration = false;
+    setAlarmTone();
     keypressed = NO_KEY;
-    delay(500);
   } else {
     myRTC.updateTime();
     keypressed = NO_KEY;
