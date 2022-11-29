@@ -2,17 +2,17 @@
 #include <Wire.h>
 #include <virtuabotixRTC.h>
 #include <IRremote.hpp>
+#include <Stepper.h>
 //#include <Servo.h>
 //#include <ServoTimer2.h>
 
-
-#define A 10
-#define B 11
-#define C 12
-#define D 13
+#define IN1 13
+#define IN2 11
+#define IN3 12
+#define IN4 10
 
 #define NUMBER_OF_STEPS_PER_REV 512
-
+#define STEPS 2038
 
 //Remote button values
 //CH - b946ff00
@@ -102,19 +102,21 @@ bool configuration = false;
 //// twelve servo objects can be created on most boards
 //int pos = 1; // variable to store the servo position
 
-
 const int IR_RECEIVE_PIN = 7;
 //const bool ENABLE_LED_FEEDBACK = false;
 unsigned long key_value = 0;
+
+Stepper myStepper = Stepper(STEPS, 13, 11, 12, 10);
 
 
 void setup() {
   Serial.begin(9600);
   IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK); // start the receiver
-  pinMode(A, OUTPUT);
-  pinMode(B, OUTPUT);
-  pinMode(C, OUTPUT);
-  pinMode(D, OUTPUT);
+  
+//  pinMode(A, OUTPUT); //not needed anymore because of Stepper initialization
+//  pinMode(B, OUTPUT);
+//  pinMode(C, OUTPUT);
+//  pinMode(D, OUTPUT);
 
   pinMode(REC, OUTPUT); // set the REC pin as output
 
@@ -305,35 +307,35 @@ void displayWaiting() {
 }
 
 
-void write(int _a, int _b, int _c, int _d) {
-  digitalWrite(A, _a);
-  digitalWrite(B, _b);
-  digitalWrite(C, _c);
-  digitalWrite(D, _d);
-}
-
-void onestep() {
-  int i = 0;
-  while (i < NUMBER_OF_STEPS_PER_REV) {
-    i++;
-    write(1, 0, 0, 0);
-    delay(1);
-    write(1, 1, 0, 0);
-    delay(1);
-    write(0, 1, 0, 0);
-    delay(1);
-    write(0, 1, 1, 0);
-    delay(1);
-    write(0, 0, 1, 0);
-    delay(1);
-    write(0, 0, 1, 1);
-    delay(1);
-    write(0, 0, 0, 1);
-    delay(1);
-    write(1, 0, 0, 1);
-    delay(1);
-  }
-}
+//void write(int _a, int _b, int _c, int _d) {
+//  digitalWrite(A, _a);
+//  digitalWrite(B, _b);
+//  digitalWrite(C, _c);
+//  digitalWrite(D, _d);
+//}
+//
+//void onestep() {
+//  int i = 0;
+//  while (i < NUMBER_OF_STEPS_PER_REV) {
+//    i++;
+//    write(1, 0, 0, 0);
+//    delay(1);
+//    write(1, 1, 0, 0);
+//    delay(1);
+//    write(0, 1, 0, 0);
+//    delay(1);
+//    write(0, 1, 1, 0);
+//    delay(1);
+//    write(0, 0, 1, 0);
+//    delay(1);
+//    write(0, 0, 1, 1);
+//    delay(1);
+//    write(0, 0, 0, 1);
+//    delay(1);
+//    write(1, 0, 0, 1);
+//    delay(1);
+//  }
+//}
 
 
 // wait for key: wait for a limited time period if a key gets pressed or not
@@ -440,7 +442,11 @@ void loop() {
           break;
         }
         //        moveServoMotor(15);
-        onestep();
+        
+//        onestep();
+        myStepper.setSpeed(10); // Rotate step motor quickly at 10 RPM
+        myStepper.step(-STEPS);
+        
         digitalWrite(PLAY_E, HIGH);
         delay(50);
         digitalWrite(PLAY_E, LOW);
