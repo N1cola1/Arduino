@@ -48,7 +48,7 @@
 #define PLAY_E 9 // pin 3 is used for playback-edge trigger
 #define FT 5 // pin 5 is used for feed through
 #define playTime 5000 // playback time 5 seconds
-#define recordTime 3000 // recording time 3 seconds you can extend time upto 10 seconds
+#define recordTime 5000 // recording time 3 seconds you can extend time upto 10 seconds
 
 //Seven segment display
 // A0 = C
@@ -398,7 +398,7 @@ void loop() {
           clearDisplay();
           break;
         } else if (keypressedx == PlusHundred_Button) {
-          A_minute += 5;
+          A_minute += 1;
           Serial.println("Alarm snoozed. You prolonged your sleeping time by 5 min.");
           display5  ();
           delay(1500);
